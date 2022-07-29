@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "mmkv-ktx"
-include ':app'
+include ':simple'
 include ':library'
