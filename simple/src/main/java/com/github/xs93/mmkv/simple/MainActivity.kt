@@ -2,8 +2,7 @@ package com.github.xs93.mmkv.simple
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.github.xs93.mmkv.MMKVOwner
-import com.github.xs93.mmkv.boolean
+import com.github.xs93.mmkv.*
 import com.tencent.mmkv.MMKV
 
 class MainActivity : AppCompatActivity(), MMKVOwner {

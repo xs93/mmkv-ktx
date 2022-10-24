@@ -56,7 +56,6 @@ private inline fun <T> MMKV.nullableDefaultValueDelegate(
         return getter(key ?: property.name, defaultValue)
     }
 
-
     override fun setValue(thisRef: Any, property: KProperty<*>, value: T?) {
         setter(key ?: property.name, value)
     }
@@ -71,13 +70,30 @@ fun MMKV.string(key: String? = null, defaultValue: String? = null): ReadWritePro
 fun MMKV.stringSet(key: String? = null, defaultValue: Set<String>? = null): ReadWriteProperty<Any, Set<String>?> =
     nullableDefaultValueDelegate(key, defaultValue, MMKV::decodeStringSet, MMKV::encode)
 
-/** 可以序列表对象代理方法 */
+
+/**保存数据，数据不能为null*/
 inline fun <reified T : Parcelable> MMKV.parcelable(
+    key: String? = null,
+    defaultValue: T
+): ReadWriteProperty<Any, T> = object : ReadWriteProperty<Any, T> {
+    override fun getValue(thisRef: Any, property: KProperty<*>): T {
+        val decodeResult = decodeParcelable(key ?: property.name, T::class.java, defaultValue)
+        return decodeResult ?: defaultValue
+    }
+
+    override fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
+        encode(key ?: property.name, value)
+    }
+}
+
+/** 可以序列表对象代理方法,此方法可以保存为null的数据 */
+inline fun <reified T : Parcelable> MMKV.parcelableWithNull(
     key: String? = null,
     defaultValue: T? = null
 ): ReadWriteProperty<Any, T?> = object : ReadWriteProperty<Any, T?> {
     override fun getValue(thisRef: Any, property: KProperty<*>): T? {
-        return decodeParcelable(key ?: property.name, T::class.java, defaultValue)
+        val decodeResult = decodeParcelable(key ?: property.name, T::class.java, defaultValue)
+        return decodeResult ?: defaultValue
     }
 
     override fun setValue(thisRef: Any, property: KProperty<*>, value: T?) {
@@ -87,6 +103,48 @@ inline fun <reified T : Parcelable> MMKV.parcelable(
 
 
 inline fun <reified T : Parcelable> MMKV.listParcelable(
+    key: String? = null,
+    defaultValue: List<T>
+): ReadWriteProperty<Any, List<T>?> = object : ReadWriteProperty<Any, List<T>?> {
+    override fun getValue(thisRef: Any, property: KProperty<*>): List<T> {
+        val prefixKey = key ?: property.name
+        if (!containsKey("$prefixKey-Size")) {
+            return defaultValue
+        }
+        val result = mutableListOf<T>()
+        val size = decodeInt("$prefixKey-Size", 0)
+        if (size == 0) {
+            return result
+        }
+        for (index in 0 until size) {
+            val itemValue = decodeParcelable("$prefixKey-$index", T::class.java, null)
+            itemValue?.let {
+                result.add(itemValue)
+            }
+        }
+        return result
+    }
+
+    override fun setValue(thisRef: Any, property: KProperty<*>, value: List<T>?) {
+        val prefixKey = key ?: property.name
+        if (value.isNullOrEmpty()) {
+            val oldSize = decodeInt("$prefixKey-Size", 0)
+            for (index in 0 until oldSize) {
+                if (decodeParcelable("$prefixKey-$index", T::class.java, null) != null) {
+                    removeValueForKey("$prefixKey-$index")
+                }
+            }
+            encode("$prefixKey-Size", 0)
+        } else {
+            for (index in value.indices) {
+                encode("$prefixKey-$index", value[index])
+            }
+            encode("$prefixKey-Size", value.size)
+        }
+    }
+}
+
+inline fun <reified T : Parcelable> MMKV.listParcelableWithNull(
     key: String? = null,
     defaultValue: List<T>? = null
 ): ReadWriteProperty<Any, List<T>?> = object : ReadWriteProperty<Any, List<T>?> {
