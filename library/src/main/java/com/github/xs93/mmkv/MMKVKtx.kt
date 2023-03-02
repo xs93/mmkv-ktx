@@ -105,7 +105,7 @@ inline fun <reified T : Parcelable> MMKV.parcelableWithNull(
 inline fun <reified T : Parcelable> MMKV.listParcelable(
     key: String? = null,
     defaultValue: List<T>
-): ReadWriteProperty<Any, List<T>?> = object : ReadWriteProperty<Any, List<T>?> {
+): ReadWriteProperty<Any, List<T>> = object : ReadWriteProperty<Any, List<T>> {
     override fun getValue(thisRef: Any, property: KProperty<*>): List<T> {
         val prefixKey = key ?: property.name
         if (!containsKey("$prefixKey-Size")) {
@@ -125,9 +125,9 @@ inline fun <reified T : Parcelable> MMKV.listParcelable(
         return result
     }
 
-    override fun setValue(thisRef: Any, property: KProperty<*>, value: List<T>?) {
+    override fun setValue(thisRef: Any, property: KProperty<*>, value: List<T>) {
         val prefixKey = key ?: property.name
-        if (value.isNullOrEmpty()) {
+        if (value.isEmpty()) {
             val oldSize = decodeInt("$prefixKey-Size", 0)
             for (index in 0 until oldSize) {
                 if (decodeParcelable("$prefixKey-$index", T::class.java, null) != null) {
